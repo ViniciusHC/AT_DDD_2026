@@ -16,6 +16,7 @@ public class TransacaoService {
     private final TransacaoRepository transacaoRepository;
     private final ContaRepository contaRepository;
 
+
     public TransacaoService(TransacaoRepository transacaoRepository, ContaRepository contaRepository) {
         this.transacaoRepository = transacaoRepository;
         this.contaRepository = contaRepository;
@@ -23,6 +24,7 @@ public class TransacaoService {
 
     private LocalDateTime tempoLimite = null;
     private List<Transacao> transacoes = new ArrayList<>();
+    private Integer transacoesIguais = 0;
 
     public List<Transacao> listarTodas() {
         return transacaoRepository.findAll();
@@ -37,6 +39,7 @@ public class TransacaoService {
         Conta conta = contaRepository.findById(idConta)
                 .orElseThrow(() -> new RuntimeException("Conta não encontrada"));
 
+
         LocalDateTime dataTransacao = LocalDateTime.now();
 
         if (!conta.getCartaoAtivo()) {
@@ -44,7 +47,6 @@ public class TransacaoService {
         }
 
         if (tempoLimite != null && dataTransacao.isBefore(tempoLimite)) {
-
             if (transacoes.size() >= 3) {
                 throw new RuntimeException("Muitas transações requisitadas");
             }
@@ -52,13 +54,16 @@ public class TransacaoService {
             transacoes.forEach(transacao -> {
                 if (novaTransacao.getValor().equals(transacao.getValor())
                         && novaTransacao.getComerciante().equals(transacao.getComerciante())) {
-                    throw new RuntimeException("Transação duplicada");
+                    transacoesIguais ++;
+                    if (transacoesIguais >= 2){
+                        throw new RuntimeException("Transação duplicada");
+                    }
                 }
             });
-
             transacoes.add(novaTransacao);
         } else {
             transacoes = new ArrayList<>();
+            transacoesIguais = 0;
             transacoes.add(novaTransacao);
             tempoLimite = LocalDateTime.now().plusMinutes(2);
         }
